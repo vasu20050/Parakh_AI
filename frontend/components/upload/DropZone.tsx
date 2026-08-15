@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { UploadCloud, FileImage, Film, FileText, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
+import { UploadCloud, FileImage, Film, FileText, CheckCircle2, AlertCircle, ArrowRight, Search, Zap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { createInvestigation } from '@/services/api';
 
@@ -15,6 +15,7 @@ export default function DropZone({ onFileSelect }: DropZoneProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeepSearch, setIsDeepSearch] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -22,7 +23,6 @@ export default function DropZone({ onFileSelect }: DropZoneProps) {
     if (!fileList || fileList.length === 0) return;
     const file = fileList[0];
 
-    // File validation
     const maxSizeBytes = 100 * 1024 * 1024; // 100MB
     if (file.size > maxSizeBytes) {
       setError('File size exceeds 100MB threshold.');
@@ -69,6 +69,7 @@ export default function DropZone({ onFileSelect }: DropZoneProps) {
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('input_type', selectedFile.type.startsWith('video/') ? 'video' : 'image');
+      formData.append('deep_search', isDeepSearch ? 'true' : 'false');
 
       const result = await createInvestigation(formData);
       setIsUploading(false);
@@ -89,6 +90,35 @@ export default function DropZone({ onFileSelect }: DropZoneProps) {
 
   return (
     <div className="w-full space-y-4">
+      {/* MODE SELECTION TOGGLE */}
+      <div className="flex items-center justify-center gap-2 p-1 bg-slate-950/80 rounded-xl border border-slate-800 max-w-sm mx-auto">
+        <button
+          type="button"
+          onClick={() => setIsDeepSearch(false)}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            !isDeepSearch
+              ? 'bg-blue-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Zap className="w-3.5 h-3.5" />
+          <span>QUICK CHECK</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setIsDeepSearch(true)}
+          className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            isDeepSearch
+              ? 'bg-purple-600 text-white shadow-sm'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Search className="w-3.5 h-3.5" />
+          <span>🔎 DEEP SEARCH</span>
+        </button>
+      </div>
+
       <div
         onDragEnter={handleDrag}
         onDragOver={handleDrag}
@@ -157,16 +187,24 @@ export default function DropZone({ onFileSelect }: DropZoneProps) {
         <button
           onClick={handleSubmit}
           disabled={isUploading}
-          className="w-full py-3.5 px-6 rounded-xl font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          className={`w-full py-3.5 px-6 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${
+            isDeepSearch
+              ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 shadow-purple-500/20'
+              : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 hover:from-blue-500 hover:to-emerald-500 shadow-blue-500/20'
+          }`}
         >
           {isUploading ? (
             <>
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Orchestrating Forensic Pipeline...</span>
+              <span>
+                {isDeepSearch ? 'Executing Deep Provenance & Crowd Intelligence Search...' : 'Running Fast Verification Check...'}
+              </span>
             </>
           ) : (
             <>
-              <span>Run Parakh AI Deep Investigation</span>
+              <span>
+                {isDeepSearch ? 'Run Deep Provenance & Crowd Search' : 'Run Parakh AI Quick Check'}
+              </span>
               <ArrowRight className="w-5 h-5" />
             </>
           )}

@@ -9,6 +9,9 @@ from backend.database.session import get_db
 from backend.models.investigation import Investigation, FileRecord
 from backend.models.score import ReportRecord
 from backend.services.investigation_service import run_full_investigation_pipeline
+from backend.provenance.engine import analyze_content_provenance
+from backend.crowd_intelligence.analyzer import analyze_crowd_intelligence
+from backend.account_intelligence.deep_search import perform_account_deep_search
 from backend.config import settings
 
 router = APIRouter(prefix="/investigations", tags=["Investigations"])
@@ -16,6 +19,7 @@ router = APIRouter(prefix="/investigations", tags=["Investigations"])
 KILLER_DEMO_PYTHON = {
   "investigation_id": "INV-2026-VIRAL-DEMO",
   "status": "completed",
+  "is_deep_search": True,
   "created_at": datetime.utcnow().isoformat(),
   "input_type": "video",
   "input_title": "Viral Video: Breaking Storm Damage Claim in Central Square",
@@ -65,18 +69,6 @@ KILLER_DEMO_PYTHON = {
       "publication_date": "2022-09-28",
       "relevance_score": 0.98,
       "is_independent": True
-    },
-    {
-      "id": "ev-2",
-      "title": "Official Meteorological Report for August 9, 2026",
-      "source_url": "https://example.com/weather/official-log",
-      "source_name": "National Weather Service",
-      "source_type": "official",
-      "role": "contradicting",
-      "snippet": "No tornadic or hurricane-force wind activity recorded in the claimed city today.",
-      "publication_date": "2026-08-09",
-      "relevance_score": 0.94,
-      "is_independent": True
     }
   ],
   "timeline": [
@@ -111,10 +103,14 @@ KILLER_DEMO_PYTHON = {
     {"id": "edge-2", "source": "node-media", "target": "node-origin", "label": "matched to original", "type": "origin"},
     {"id": "edge-3", "source": "node-origin", "target": "node-verdict", "label": "drives verdict", "type": "supports"}
   ],
+  "provenance": analyze_content_provenance("Viral Video: Breaking Storm Damage Claim", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"),
+  "crowd_intelligence": analyze_crowd_intelligence(),
+  "account_intelligence": perform_account_deep_search("acc_101", "@digital_observer"),
   "methodology": {
     "models_used": [
       {"name": "umm-maybe/AI-image-detector (ViT)", "version": "1.2.0", "confidence": 0.94, "processing_ms": 180},
-      {"name": "Error Level Forensics (ELA)", "version": "2.1.0", "confidence": 0.88, "processing_ms": 45}
+      {"name": "Content Provenance Tracker", "version": "1.0", "confidence": 0.91, "processing_ms": 110},
+      {"name": "Crowd Signal Classifier", "version": "1.0", "confidence": 0.88, "processing_ms": 95}
     ],
     "evidence_count": 2,
     "limitations": [
@@ -130,6 +126,7 @@ async def create_investigation(
     file: UploadFile = File(None),
     url: str = Form(None),
     input_type: str = Form("image"),
+    deep_search: bool = Form(False),
     db: AsyncSession = Depends(get_db)
 ):
     inv_id = f"INV-{uuid.uuid4().hex[:8].upper()}"
@@ -167,7 +164,7 @@ async def create_investigation(
     await db.commit()
 
     if saved_file_path and os.path.exists(saved_file_path):
-        report = await run_full_investigation_pipeline(inv_id, saved_file_path, db)
+        report = await run_full_investigation_pipeline(inv_id, saved_file_path, db, is_deep_search=deep_search)
         return {"investigation_id": inv_id, "status": "completed", "report": report}
 
     return {"investigation_id": inv_id, "status": "completed"}
@@ -183,6 +180,20 @@ async def get_investigation_report(id: str, db: AsyncSession = Depends(get_db)):
         return demo
 
     return report_record.report_json
+
+@router.get("/{id}/provenance")
+async def get_provenance_chain(id: str, db: AsyncSession = Depends(get_db)):
+    report = await get_investigation_report(id, db)
+    return report.get("provenance", analyze_content_provenance("Target Media", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"))
+
+@router.get("/{id}/crowd-analysis")
+async def get_crowd_analysis(id: str, db: AsyncSession = Depends(get_db)):
+    report = await get_investigation_report(id, db)
+    return report.get("crowd_intelligence", analyze_crowd_intelligence())
+
+@router.get("/accounts/{account_id}/deep-search")
+async def get_account_deep_search(account_id: str):
+    return perform_account_deep_search(account_id)
 
 @router.get("")
 async def list_investigations(db: AsyncSession = Depends(get_db)):

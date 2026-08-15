@@ -10,17 +10,25 @@ import ScoreDimensionsView from '@/components/report/ScoreDimensions';
 import FindingsList from '@/components/report/FindingsList';
 import EvidenceGraph from '@/components/report/EvidenceGraph';
 import TruthTimeline from '@/components/report/TruthTimeline';
+import ProvenanceChain from '@/components/report/ProvenanceChain';
+import CrowdIntelligenceView from '@/components/report/CrowdIntelligenceView';
+import AccountIntelligenceModal from '@/components/report/AccountIntelligenceModal';
 import ChallengeVerdictModal from '@/components/report/ChallengeVerdictModal';
 import VerificationReceipt from '@/components/report/VerificationReceipt';
 import { getInvestigationReport, InvestigationReport } from '@/services/api';
-import { ShieldCheck, HelpCircle, FileCheck, Network, Clock, Cpu, ExternalLink, Share2, FileImage, Camera, Sparkles, AlertOctagon, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ShieldCheck, HelpCircle, FileCheck, Network, Clock, Cpu, ExternalLink, Share2, FileImage, Camera, Sparkles, GitBranch, Users, Search } from 'lucide-react';
 
 export default function InvestigationReportPage() {
   const params = useParams();
   const id = (params?.id as string) || 'INV-2026-VIRAL-DEMO';
   const [report, setReport] = useState<InvestigationReport | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'forensics' | 'graph' | 'timeline' | 'receipt'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'provenance' | 'crowd' | 'forensics' | 'graph' | 'timeline' | 'receipt'>('overview');
   const [isChallengeOpen, setIsChallengeOpen] = useState(false);
+
+  // Account Deep Search State
+  const [selectedAccountId, setSelectedAccountId] = useState<string | null>(null);
+  const [selectedUsername, setSelectedUsername] = useState<string>('');
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
 
   useEffect(() => {
     async function loadReport() {
@@ -35,13 +43,21 @@ export default function InvestigationReportPage() {
       <div className="min-h-screen bg-[#07090e] text-slate-100 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-semibold text-slate-400">Loading Systemic Investigation Details...</span>
+          <span className="text-sm font-semibold text-slate-400">Loading Investigation Details & Provenance Engine...</span>
         </div>
       </div>
     );
   }
 
   const forensics = report.forensics;
+  const provenance = report.provenance;
+  const crowdData = report.crowd_intelligence;
+
+  const handleInvestigateAccount = (accountId: string, username: string) => {
+    setSelectedAccountId(accountId);
+    setSelectedUsername(username);
+    setIsAccountModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 relative overflow-hidden flex flex-col">
@@ -59,6 +75,11 @@ export default function InvestigationReportPage() {
               <span className="text-xs text-slate-500 font-mono">
                 {new Date(report.created_at).toLocaleDateString()} • {report.input_type.toUpperCase()}
               </span>
+              {report.is_deep_search && (
+                <span className="text-xs font-mono px-2.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center gap-1 font-bold">
+                  <Search className="w-3 h-3" /> DEEP SEARCH ACTIVE
+                </span>
+              )}
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-white">
               {report.input_title || 'Multimedia Verification Report'}
@@ -73,11 +94,11 @@ export default function InvestigationReportPage() {
           </div>
         </div>
 
-        {/* SYSTEMIC FORENSIC SUMMARY CARDS (ALWAYS VISIBLE) */}
+        {/* SYSTEMIC FORENSIC SUMMARY CARDS */}
         {forensics && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             
-            {/* CARD 1: AI Generation & Model Signature */}
+            {/* CARD 1: AI Generation Analysis */}
             <div className={`p-5 rounded-2xl glass-panel border space-y-3 ${
               forensics.ai_analysis.is_ai_generated
                 ? 'border-rose-500/40 bg-rose-950/20'
@@ -151,42 +172,46 @@ export default function InvestigationReportPage() {
               </div>
             </div>
 
-            {/* CARD 3: ELA Compression & Edit Integrity */}
+            {/* CARD 3: Provenance Origin Quick Status */}
             <div className="p-5 rounded-2xl glass-panel border border-slate-800 space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
-                  <Camera className="w-4 h-4 text-amber-400" /> Compression Forensics (ELA)
+                  <GitBranch className="w-4 h-4 text-purple-400" /> Provenance & Context
                 </span>
-                <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
-                  forensics.ela_forensics.is_suspicious
-                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                }`}>
-                  {forensics.ela_forensics.is_suspicious ? 'LOCAL EDITS' : 'UNIFORM ELA'}
-                </span>
+                {provenance && (
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                    provenance.has_context_shift
+                      ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                      : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                  }`}>
+                    {provenance.provenance_status.replace('_', ' ')}
+                  </span>
+                )}
               </div>
 
-              <div>
-                <div className="flex items-baseline justify-between">
-                  <span className="text-2xl font-black text-white">{forensics.ela_forensics.ela_score}/100</span>
-                  <span className="text-xs text-slate-400 font-mono">ELA Integrity Score</span>
+              {provenance?.earliest_discovered_source && (
+                <div>
+                  <span className="text-[10px] text-slate-500 font-mono block uppercase">Earliest Discovered Source</span>
+                  <span className="text-sm font-extrabold text-white">{provenance.earliest_discovered_source.source_name}</span>
+                  <span className="text-xs text-slate-400 block font-mono">First Seen: {provenance.earliest_discovered_source.first_seen_date}</span>
                 </div>
-              </div>
+              )}
 
               <p className="text-xs text-slate-300 leading-relaxed pt-1 border-t border-slate-800/80">
-                {forensics.ela_forensics.description}
+                {provenance?.context_summary || 'Media forensics evaluated against origin source database.'}
               </p>
             </div>
 
           </div>
         )}
 
-        {/* TOP ACTIONS BAR */}
+        {/* TOP ACTIONS & TABS BAR */}
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* Tabs Nav */}
           <div className="flex items-center gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-800 overflow-x-auto max-w-full">
             {[
               { key: 'overview', label: 'Overview & Scores', icon: <ShieldCheck className="w-4 h-4" /> },
+              { key: 'provenance', label: 'Content Provenance Chain', icon: <GitBranch className="w-4 h-4" /> },
+              { key: 'crowd', label: 'Crowd Intelligence', icon: <Users className="w-4 h-4" /> },
               { key: 'forensics', label: 'Systemic Content Breakdown', icon: <Cpu className="w-4 h-4" /> },
               { key: 'graph', label: 'Evidence Graph', icon: <Network className="w-4 h-4" /> },
               { key: 'timeline', label: 'Truth Timeline', icon: <Clock className="w-4 h-4" /> },
@@ -207,7 +232,6 @@ export default function InvestigationReportPage() {
             ))}
           </div>
 
-          {/* Action Buttons */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsChallengeOpen(true)}
@@ -236,20 +260,16 @@ export default function InvestigationReportPage() {
         {/* TAB 1: OVERVIEW & SCORES */}
         {activeTab === 'overview' && (
           <div className="space-y-8">
-            
-            {/* 5-Axis Score Breakdown */}
             <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-4">
               <h3 className="font-bold text-white text-base">5-Axis Trust Dimension Breakdown</h3>
               <ScoreDimensionsView scores={report.scores} />
             </div>
 
-            {/* Findings List */}
             <div className="space-y-3">
               <h3 className="font-bold text-white text-base">Key Forensics & Context Findings</h3>
               <FindingsList findings={report.findings} />
             </div>
 
-            {/* Retrieved Evidence Table */}
             <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-4">
               <h3 className="font-bold text-white text-base">Retrieved Evidence & Sources</h3>
               <div className="space-y-3">
@@ -280,11 +300,29 @@ export default function InvestigationReportPage() {
                 ))}
               </div>
             </div>
-
           </div>
         )}
 
-        {/* TAB 2: SYSTEMIC CONTENT BREAKDOWN (FAKE CONTENT ANALYSIS) */}
+        {/* TAB 2: CONTENT PROVENANCE CHAIN */}
+        {activeTab === 'provenance' && (
+          <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-4">
+            <h3 className="font-bold text-white text-base mb-1">Content Provenance & Origin Chain</h3>
+            <ProvenanceChain provenance={provenance} />
+          </div>
+        )}
+
+        {/* TAB 3: CROWD INTELLIGENCE */}
+        {activeTab === 'crowd' && (
+          <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-4">
+            <h3 className="font-bold text-white text-base mb-1">Crowd Intelligence & Sentiment Comparison</h3>
+            <CrowdIntelligenceView
+              crowdData={crowdData}
+              onInvestigateAccount={handleInvestigateAccount}
+            />
+          </div>
+        )}
+
+        {/* TAB 4: SYSTEMIC CONTENT BREAKDOWN */}
         {activeTab === 'forensics' && (
           <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-6">
             <div>
@@ -297,13 +335,6 @@ export default function InvestigationReportPage() {
                 <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Detected Image Element Breakdown</h4>
                 {forensics.fake_content_analysis.map((item, idx) => (
                   <div key={idx} className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 flex items-start gap-3">
-                    {item.status === 'authentic' ? (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                    ) : item.status === 'synthetic_ai' ? (
-                      <Sparkles className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
-                    ) : (
-                      <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-                    )}
                     <div className="space-y-1 flex-1">
                       <div className="flex items-center justify-between">
                         <span className="font-bold text-sm text-white">{item.element}</span>
@@ -323,39 +354,21 @@ export default function InvestigationReportPage() {
                 ))}
               </div>
             )}
-
-            <div className="space-y-3 pt-4 border-t border-slate-800">
-              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Model Registry & Execution Audit</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {report.methodology.models_used.map((model, idx) => (
-                  <div key={idx} className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-white">{model.name}</span>
-                      <span className="font-mono text-slate-400">v{model.version}</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs text-slate-400">
-                      <span>Confidence: {(model.confidence * 100).toFixed(0)}%</span>
-                      <span>Latency: {model.processing_ms} ms</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
           </div>
         )}
 
-        {/* TAB 3: EVIDENCE GRAPH */}
+        {/* TAB 5: EVIDENCE GRAPH */}
         {activeTab === 'graph' && (
           <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-4">
             <div>
               <h3 className="font-bold text-white text-base mb-1">Interactive Verification Graph</h3>
-              <p className="text-xs text-slate-400">Maps relationship nodes between content, extracted claims, origin sources, and evidence.</p>
+              <p className="text-xs text-slate-400">Maps relationship nodes between content, extracted claims, origin sources, evidence, and crowd comments.</p>
             </div>
             <EvidenceGraph nodesData={report.graph_nodes} edgesData={report.graph_edges} />
           </div>
         )}
 
-        {/* TAB 4: TRUTH TIMELINE */}
+        {/* TAB 6: TRUTH TIMELINE */}
         {activeTab === 'timeline' && (
           <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-4">
             <div>
@@ -366,12 +379,20 @@ export default function InvestigationReportPage() {
           </div>
         )}
 
-        {/* TAB 5: VERIFICATION RECEIPT */}
+        {/* TAB 7: VERIFICATION RECEIPT */}
         {activeTab === 'receipt' && (
           <VerificationReceipt report={report} />
         )}
 
       </main>
+
+      {/* Account Deep Search Drawer Modal */}
+      <AccountIntelligenceModal
+        accountId={selectedAccountId}
+        username={selectedUsername}
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+      />
 
       {/* Challenge Verdict Modal */}
       <ChallengeVerdictModal

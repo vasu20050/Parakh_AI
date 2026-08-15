@@ -99,9 +99,96 @@ export interface SystemicImageForensics {
   fake_content_analysis: FakeContentItem[];
 }
 
+// USP #1 Content Provenance Interfaces
+export interface ProvenanceStep {
+  step_order: number;
+  title: string;
+  description: string;
+  source_name: string;
+  source_url: string;
+  event_date: string;
+  status: 'CURRENT_VIRAL_POST' | 'REPOSTED_CONTENT' | 'REUSED_CONTENT' | 'EARLIEST_DISCOVERED_SOURCE' | 'UNKNOWN_ORIGIN';
+  is_earliest_source: boolean;
+}
+
+export interface ContentProvenance {
+  provenance_chain: ProvenanceStep[];
+  earliest_discovered_source: {
+    source_name: string;
+    source_url: string;
+    first_seen_date: string;
+    status: string;
+  };
+  has_context_shift: boolean;
+  provenance_status: string;
+  context_summary: string;
+  confidence_score: number;
+}
+
+// USP #1 Crowd Intelligence Interfaces
+export interface CrowdCommentItem {
+  id: string;
+  username: string;
+  account_id: string;
+  comment_text: string;
+  category: 'EVIDENCE_BEARING' | 'UNSUPPORTED_CLAIM' | 'CONTRADICTORY_CLAIM' | 'OPINION' | 'QUESTION' | 'PERSONAL_TESTIMONY' | 'SOURCE_REFERENCE' | 'IRRELEVANT';
+  has_evidence: boolean;
+  evidence_url?: string | null;
+}
+
+export interface CrowdClaimCluster {
+  claim_title: string;
+  percentage: number;
+  comment_count: number;
+  category: string;
+  status_label: string;
+}
+
+export interface CrowdIntelligenceData {
+  total_comments_analyzed: number;
+  sample_comments: CrowdCommentItem[];
+  category_counts: Record<string, number>;
+  evidence_bearing_count: number;
+  unsupported_count: number;
+  contradictory_count: number;
+  claim_clusters: CrowdClaimCluster[];
+  sentiment_vs_evidence: {
+    public_discussion_summary: string;
+    independent_evidence_summary: string;
+    alignment_status: 'ALIGNED' | 'PARTIALLY_ALIGNED' | 'CONTRADICTORY';
+    verdict_impact_note: string;
+  };
+  crowd_signal_weight: number;
+}
+
+// USP #1 Account Deep Search Interfaces
+export interface AccountClaimItem {
+  id: string;
+  claim_text: string;
+  event_date: string;
+  evidence_summary: string;
+  status: 'SUPPORTED' | 'UNSUPPORTED' | 'CONTRADICTED' | 'UNVERIFIED';
+  source_ref?: string;
+}
+
+export interface AccountDeepSearchData {
+  account_id: string;
+  username: string;
+  public_profile_summary: string;
+  total_claims_evaluated: number;
+  supported_claims_count: number;
+  unsupported_claims_count: number;
+  reliability_score_pct: number;
+  reliability_signal: string;
+  assessment_summary: string;
+  claim_history: AccountClaimItem[];
+  responsible_ai_note: string;
+}
+
 export interface InvestigationReport {
   investigation_id: string;
   status: 'completed' | 'processing' | 'pending' | 'failed';
+  is_deep_search?: boolean;
   created_at: string;
   input_type: 'image' | 'video' | 'url' | 'audio' | 'text';
   input_preview_url?: string;
@@ -115,6 +202,9 @@ export interface InvestigationReport {
   graph_nodes: GraphNodeData[];
   graph_edges: GraphEdgeData[];
   forensics?: SystemicImageForensics;
+  provenance?: ContentProvenance;
+  crowd_intelligence?: CrowdIntelligenceData;
+  account_intelligence?: AccountDeepSearchData;
   methodology: {
     models_used: ModelRunInfo[];
     evidence_count: number;
@@ -123,13 +213,12 @@ export interface InvestigationReport {
   };
 }
 
-// Memory cache for dynamic local reports
 const localReportCache: Record<string, InvestigationReport> = {};
 
-// Sample Mock Data for Instant Interactive Demos (Killer Demo: Viral Video Context Mismatch)
 export const KILLER_DEMO_REPORT: InvestigationReport = {
   investigation_id: "INV-2026-VIRAL-DEMO",
   status: "completed",
+  is_deep_search: true,
   created_at: new Date().toISOString(),
   input_type: "video",
   input_title: "Viral Video: Breaking Storm Damage Claim in Central Square",
@@ -179,18 +268,6 @@ export const KILLER_DEMO_REPORT: InvestigationReport = {
       relevance_score: 0.98,
       is_independent: true,
     },
-    {
-      id: "ev-2",
-      title: "Official Meteorological Report for August 9, 2026",
-      source_url: "https://example.com/weather/official-log",
-      source_name: "National Weather Service",
-      source_type: "official",
-      role: "contradicting",
-      snippet: "No tornadic or hurricane-force wind activity recorded in the claimed city today.",
-      publication_date: "2026-08-09",
-      relevance_score: 0.94,
-      is_independent: true,
-    },
   ],
   timeline: [
     {
@@ -198,7 +275,7 @@ export const KILLER_DEMO_REPORT: InvestigationReport = {
       date: "Sept 28, 2022",
       title: "First Recorded Appearance",
       description: "Original video published by news outlet covering storm impact in Florida.",
-      source_name: "Archive News",
+      source_name: "Archive News Network",
       source_url: "https://example.com/archive/storm-2022",
       type: "origin",
       is_original: true,
@@ -217,44 +294,172 @@ export const KILLER_DEMO_REPORT: InvestigationReport = {
     { id: "node-media", label: "Submitted Video Clip", type: "content", status: "authentic", subtext: "Authenticity: 91%" },
     { id: "node-claim", label: "Claim: 'Happening Today Live'", type: "claim", status: "misleading", subtext: "Credibility: 24%" },
     { id: "node-origin", label: "2022 Archive Broadcast", type: "source", status: "neutral", subtext: "Earliest Match" },
+    { id: "node-comm-1", label: "Comment (@digital_observer)", type: "evidence", status: "neutral", subtext: "EVIDENCE_BEARING" },
     { id: "node-verdict", label: "Verdict: MISLEADING", type: "verdict", status: "misleading", subtext: "Trust: 34/100" },
   ],
   graph_edges: [
     { id: "edge-1", source: "node-media", target: "node-claim", label: "attached to", type: "contains" },
     { id: "edge-2", source: "node-media", target: "node-origin", label: "matched to original", type: "origin" },
-    { id: "edge-3", source: "node-origin", target: "node-verdict", label: "drives verdict", type: "supports" },
+    { id: "edge-3", source: "node-claim", target: "node-comm-1", label: "discussed by crowd", type: "contains" },
+    { id: "edge-4", source: "node-origin", target: "node-verdict", label: "drives verdict", type: "supports" },
   ],
-  forensics: {
-    format: "MP4 Video (H.264)",
-    resolution: "1920x1080 (1080p)",
-    aspect_ratio: "16:9",
-    color_mode: "YUV420p",
-    camera_info: "Broadcast Video Camera",
-    software_used: "Adobe Premiere Pro (2022)",
-    ai_analysis: {
-      is_ai_generated: false,
-      ai_probability_pct: 3.8,
-      authenticity_score: 96.2,
-      generator_type: "Optical Lens Camera Capture",
-    },
-    ela_forensics: {
-      ela_score: 91,
-      is_suspicious: false,
-      description: "Optical flow and spatial frame analysis show uniform compression boundaries.",
-    },
-    fake_content_analysis: [
-      { element: "Visual Video Track", status: "authentic", description: "Authentic 2022 broadcast footage with no generative AI modifications." },
-      { element: "Timestamp & Event Claim", status: "edited", description: "Social caption re-labeled old 2022 footage as an event occurring today." },
+  provenance: {
+    provenance_chain: [
+      {
+        step_order: 1,
+        title: "Current Viral Post Submission",
+        description: "Content submitted for instant verification with caption 'Live in downtown today'.",
+        source_name: "Viral Social Account",
+        source_url: "https://social.example.com/post/current",
+        event_date: "Today",
+        status: "CURRENT_VIRAL_POST",
+        is_earliest_source: false,
+      },
+      {
+        step_order: 2,
+        title: "Cross-Platform Re-upload",
+        description: "Identical image keyframe match found on secondary Telegram archive.",
+        source_name: "Telegram News Bot",
+        source_url: "https://telegram.org/p/repost_archive",
+        event_date: "Aug 08, 2026",
+        status: "REPOSTED_CONTENT",
+        is_earliest_source: false,
+      },
+      {
+        step_order: 3,
+        title: "Earliest Discoverable Source Broadcast",
+        description: "Original uncompressed broadcast frame aired during Hurricane Ian.",
+        source_name: "Archive News Network",
+        source_url: "https://example.com/archive/storm-2022",
+        event_date: "Sept 28, 2022",
+        status: "EARLIEST_DISCOVERED_SOURCE",
+        is_earliest_source: true,
+      },
     ],
+    earliest_discovered_source: {
+      source_name: "Archive News Network",
+      source_url: "https://example.com/archive/storm-2022",
+      first_seen_date: "Sept 28, 2022",
+      status: "EARLIEST_DISCOVERED_SOURCE",
+    },
+    has_context_shift: true,
+    provenance_status: "CONTEXT_CHANGED",
+    context_summary: "Media was originally recorded on Sept 28, 2022. The current post re-frames this footage with a modified claim.",
+    confidence_score: 0.98,
+  },
+  crowd_intelligence: {
+    total_comments_analyzed: 1248,
+    sample_comments: [
+      {
+        id: "c-101",
+        username: "@digital_observer",
+        account_id: "acc_101",
+        comment_text: "Here is the original 2022 broadcast footage link: https://archive.org/details/hurricane_2022",
+        category: "EVIDENCE_BEARING",
+        has_evidence: true,
+        evidence_url: "https://archive.org/details/hurricane_2022",
+      },
+      {
+        id: "c-102",
+        username: "@truth_seeker_99",
+        account_id: "acc_102",
+        comment_text: "This video is definitely 100% fake AI deepfake!",
+        category: "UNSUPPORTED_CLAIM",
+        has_evidence: false,
+        evidence_url: null,
+      },
+      {
+        id: "c-103",
+        username: "@meteorology_watch",
+        account_id: "acc_103",
+        comment_text: "Official weather logs from NWS show zero storm activity in Central Square today.",
+        category: "EVIDENCE_BEARING",
+        has_evidence: true,
+        evidence_url: "https://weather.gov/logs/2026-08",
+      },
+    ],
+    category_counts: {
+      EVIDENCE_BEARING: 18,
+      UNSUPPORTED_CLAIM: 743,
+      CONTRADICTORY_CLAIM: 102,
+      OPINION: 210,
+      QUESTION: 95,
+      PERSONAL_TESTIMONY: 45,
+      SOURCE_REFERENCE: 25,
+      IRRELEVANT: 10,
+    },
+    evidence_bearing_count: 18,
+    unsupported_count: 743,
+    contradictory_count: 102,
+    claim_clusters: [
+      {
+        claim_title: "Video is fake AI generated",
+        percentage: 62.0,
+        comment_count: 773,
+        category: "unsupported",
+        status_label: "UNSUPPORTED BY FORENSICS (3.8% AI)",
+      },
+      {
+        claim_title: "Video is recycled from 2022 storm",
+        percentage: 27.0,
+        comment_count: 337,
+        category: "evidence_bearing",
+        status_label: "SUPPORTED BY ARCHIVE MATCH",
+      },
+      {
+        claim_title: "Video happened yesterday in downtown",
+        percentage: 11.0,
+        comment_count: 138,
+        category: "contradictory",
+        status_label: "CONTRADICTED BY NWS LOGS",
+      },
+    ],
+    sentiment_vs_evidence: {
+      public_discussion_summary: "62% of crowd comments claim the video is fake AI, while 27% point to recycled 2022 footage.",
+      independent_evidence_summary: "Media is authentic optical video (3.8% AI score). However, historical archive matching confirms footage originated in Sept 2022.",
+      alignment_status: "PARTIALLY_ALIGNED",
+      verdict_impact_note: "Public crowd sentiment incorrectly assumed AI deepfake. However, evidence-bearing comments pointed to the real 2022 archive match.",
+    },
+    crowd_signal_weight: 0.15,
+  },
+  account_intelligence: {
+    account_id: "acc_101",
+    username: "@digital_observer",
+    public_profile_summary: "Public media research contributor",
+    total_claims_evaluated: 3,
+    supported_claims_count: 2,
+    unsupported_claims_count: 1,
+    reliability_score_pct: 66.7,
+    reliability_signal: "MIXED_CLAIM_SUPPORT",
+    assessment_summary: "Public claim history shows 2 supported claims and 1 unsupported claim across evaluated public statements.",
+    claim_history: [
+      {
+        id: "ch-1",
+        claim_text: "Viral video clip shows storm damage in Central Square occurring today.",
+        event_date: "Today",
+        evidence_summary: "Cross-referenced with NWS meteorological logs. No storm recorded today.",
+        status: "UNSUPPORTED",
+        source_ref: "https://weather.gov/logs/2026-08",
+      },
+      {
+        id: "ch-2",
+        claim_text: "Original storm video footage first aired in September 2022 during Hurricane Ian.",
+        event_date: "Sept 28, 2022",
+        evidence_summary: "Archive news broadcast matches keyframe perceptual hashes.",
+        status: "SUPPORTED",
+        source_ref: "https://archive.org/details/hurricane_2022",
+      },
+    ],
+    responsible_ai_note: "Signals evaluate public claim alignment with empirical evidence, not individual integrity.",
   },
   methodology: {
     models_used: [
       { name: "umm-maybe/AI-image-detector (ViT)", version: "1.2.0", confidence: 0.94, processing_ms: 180 },
-      { name: "Error Level Forensics (ELA)", version: "2.1.0", confidence: 0.88, processing_ms: 45 },
-      { name: "FFmpeg Keyframe Spatial Tracker", version: "5.1", confidence: 0.92, processing_ms: 320 },
+      { name: "Content Provenance Tracker", version: "1.0", confidence: 0.98, processing_ms: 110 },
+      { name: "Crowd Signal Classifier", version: "1.0", confidence: 0.88, processing_ms: 95 },
     ],
     evidence_count: 2,
-    limitations: ["Audio track spectrum matches stock atmospheric audio."],
+    limitations: ["Audio analysis was not required."],
     content_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   },
 };
@@ -281,6 +486,7 @@ export async function createInvestigation(formData: FormData): Promise<{ investi
   const newId = `INV-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
   const fileObj = formData.get('file') as File | null;
   const urlVal = formData.get('url') as string | null;
+  const isDeepSearch = formData.get('deep_search') === 'true';
   const fileName = fileObj ? fileObj.name : urlVal || 'Submitted Content';
   const fileType = (formData.get('input_type') as string) || 'image';
 
@@ -300,30 +506,15 @@ export async function createInvestigation(formData: FormData): Promise<{ investi
   const overallTrust = Math.round(0.25 * mediaAuth + 0.25 * claimCred + 0.20 * contextAcc + 0.15 * sourceRel + 0.15 * evStrength);
 
   let verdict: VerdictType = 'LIKELY_AUTHENTIC';
-  let isAiGenerated = false;
-  let aiProb = 100 - mediaAuth;
-
-  if (mediaAuth < 60 && absHash % 2 === 0) {
-    verdict = 'LIKELY_AI_GENERATED';
-    isAiGenerated = true;
-    aiProb = 88.4;
-  } else if (mediaAuth < 65) {
-    verdict = 'LIKELY_MANIPULATED';
-  } else if (claimCred < 40) {
-    verdict = 'FALSE_CLAIM';
-  } else if (contextAcc < 50) {
-    verdict = 'LIKELY_MISLEADING';
-  } else if (overallTrust > 75) {
-    verdict = 'VERIFIED';
-  }
-
-  const ext = fileName.split('.').pop()?.toUpperCase() || 'JPEG';
-  const formatName = ext === 'PNG' ? 'PNG (Portable Network Graphics)' : ext === 'WEBP' ? 'WebP Image' : 'JPEG Image';
+  if (contextAcc < 50) verdict = 'LIKELY_MISLEADING';
+  else if (mediaAuth < 65) verdict = 'LIKELY_MANIPULATED';
+  else if (claimCred < 40) verdict = 'FALSE_CLAIM';
+  else if (overallTrust > 75) verdict = 'VERIFIED';
 
   const dynamicReport: InvestigationReport = {
+    ...KILLER_DEMO_REPORT,
     investigation_id: newId,
-    status: 'completed',
-    created_at: new Date().toISOString(),
+    is_deep_search: isDeepSearch,
     input_type: fileType as any,
     input_title: fileName,
     verdict: verdict,
@@ -334,105 +525,6 @@ export async function createInvestigation(formData: FormData): Promise<{ investi
       context_accuracy: contextAcc,
       source_reliability: sourceRel,
       evidence_strength: evStrength,
-    },
-    findings: [
-      {
-        id: 'f-1',
-        type: 'media',
-        severity: isAiGenerated ? 'high' : mediaAuth < 70 ? 'medium' : 'low',
-        title: isAiGenerated ? 'AI Generation Signature Detected' : 'Image Forensic Integrity Analysis',
-        description: isAiGenerated
-          ? `ViT Transformer Classifier detected high synthetic frequency probability (${aiProb}% AI).`
-          : `Error Level Analysis (ELA) and noise variance evaluated file image integrity at ${mediaAuth}/100.`,
-      },
-      {
-        id: 'f-2',
-        type: 'claim',
-        severity: claimCred < 50 ? 'high' : 'low',
-        title: 'Extracted Claim Alignment',
-        description: `Open-source NLP claim extractor cross-checked statements against retrieved web records.`,
-      },
-    ],
-    evidence: [
-      {
-        id: 'ev-1',
-        title: `Web Search Match & Indexing for ${fileName}`,
-        source_url: 'https://example.com/search/result',
-        source_name: 'DuckDuckGo Open Search Engine',
-        source_type: 'news',
-        role: claimCred < 50 ? 'contradicting' : 'supporting',
-        snippet: `Public web index and archived news records cross-checked for ${fileName}.`,
-        publication_date: new Date().toISOString().split('T')[0],
-        relevance_score: 0.89,
-        is_independent: true,
-      },
-    ],
-    timeline: [
-      {
-        id: 't-1',
-        date: new Date().toLocaleDateString(),
-        title: 'Initial Systematic Forensics Ingestion',
-        description: `Media ingested, SHA-256 hash calculated, metadata parsed for ${fileName}.`,
-        source_name: 'Parakh AI Engine',
-        source_url: '#',
-        type: 'origin',
-        is_original: true,
-      },
-    ],
-    graph_nodes: [
-      { id: 'node-content', label: fileName, type: 'content', status: isAiGenerated ? 'manipulated' : 'authentic', subtext: `Authenticity: ${mediaAuth}%` },
-      { id: 'node-verdict', label: `Verdict: ${verdict}`, type: 'verdict', status: 'neutral', subtext: `Trust: ${overallTrust}/100` },
-    ],
-    graph_edges: [
-      { id: 'edge-1', source: 'node-content', target: 'node-verdict', label: 'evaluates to', type: 'supports' },
-    ],
-    forensics: {
-      format: formatName,
-      resolution: `${1024 + (absHash % 800)}x${768 + (absHash % 600)}`,
-      aspect_ratio: '1.33:1',
-      color_mode: 'sRGB 8-bit',
-      camera_info: isAiGenerated ? 'None (Synthetic Generative Architecture)' : absHash % 2 === 0 ? 'Canon EOS R6' : 'iPhone 15 Pro',
-      software_used: isAiGenerated ? 'Midjourney / DALL-E 3 Pipeline' : absHash % 3 === 0 ? 'Adobe Photoshop 2024' : 'None Detected',
-      ai_analysis: {
-        is_ai_generated: isAiGenerated,
-        ai_probability_pct: aiProb,
-        authenticity_score: 100 - aiProb,
-        generator_type: isAiGenerated
-          ? 'Synthetic AI Media (Midjourney / DALL-E Architecture)'
-          : 'Authentic Optical Lens Capture',
-      },
-      ela_forensics: {
-        ela_score: mediaAuth,
-        is_suspicious: mediaAuth < 65,
-        description: mediaAuth < 65
-          ? 'High compression variance detected across localized image regions.'
-          : 'Uniform error level compression pattern consistent across all pixel blocks.',
-      },
-      fake_content_analysis: [
-        {
-          element: 'Background Lighting & Spatial Geometry',
-          status: isAiGenerated ? 'synthetic_ai' : 'authentic',
-          description: isAiGenerated
-            ? 'Generative lighting artifacts and high-frequency noise typical of AI diffusion models.'
-            : 'Natural optical lighting and ray consistency.',
-        },
-        {
-          element: 'Pixel Compression Boundaries (ELA)',
-          status: mediaAuth < 65 ? 'edited' : 'authentic',
-          description: mediaAuth < 65
-            ? 'Localized resaving artifacts indicating potential digital editing.'
-            : 'Unmodified compression signature.',
-        },
-      ],
-    },
-    methodology: {
-      models_used: [
-        { name: 'umm-maybe/AI-image-detector (ViT)', version: '1.2.0', confidence: isAiGenerated ? 0.92 : 0.12, processing_ms: 140 },
-        { name: 'Error Level Forensics (ELA)', version: '2.1.0', confidence: 0.88, processing_ms: 45 },
-      ],
-      evidence_count: 1,
-      limitations: ['Audio track analysis was not required for image file.'],
-      content_hash: Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
     },
   };
 
@@ -462,4 +554,16 @@ export async function getInvestigationReport(id: string): Promise<InvestigationR
     ...KILLER_DEMO_REPORT,
     investigation_id: id || KILLER_DEMO_REPORT.investigation_id,
   };
+}
+
+export async function fetchAccountDeepSearch(accountId: string): Promise<AccountDeepSearchData> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/investigations/accounts/${accountId}/deep-search`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch {
+    console.warn('Backend API offline. Returning demo account deep search.');
+  }
+  return KILLER_DEMO_REPORT.account_intelligence!;
 }

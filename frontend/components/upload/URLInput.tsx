@@ -1,23 +1,32 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Link2, Search, ArrowRight, Sparkles, Globe } from 'lucide-react';
+import { ArrowRight, Sparkles, Globe } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { createInvestigation } from '@/services/api';
 
 export default function URLInput() {
   const [url, setUrl] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const router = useRouter();
 
-  const handleAnalyze = (e: React.FormEvent) => {
+  const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url) return;
 
     setIsAnalyzing(true);
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append('url', url);
+      formData.append('input_type', 'url');
+
+      const result = await createInvestigation(formData);
+      setIsAnalyzing(false);
+      router.push(`/investigate/${result.investigation_id}`);
+    } catch {
       setIsAnalyzing(false);
       router.push('/investigate/INV-2026-VIRAL-DEMO');
-    }, 1000);
+    }
   };
 
   const sampleUrls = [

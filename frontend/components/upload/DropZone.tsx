@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { UploadCloud, FileImage, Film, FileText, CheckCircle2, AlertCircle, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { createInvestigation } from '@/services/api';
 
 interface DropZoneProps {
   onFileSelect?: (file: File) => void;
@@ -64,12 +65,19 @@ export default function DropZone({ onFileSelect }: DropZoneProps) {
     if (!selectedFile) return;
     setIsUploading(true);
 
-    // Simulate backend upload dispatch & investigation creation
-    setTimeout(() => {
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('input_type', selectedFile.type.startsWith('video/') ? 'video' : 'image');
+
+      const result = await createInvestigation(formData);
       setIsUploading(false);
-      // Navigate to investigation report page
+      router.push(`/investigate/${result.investigation_id}`);
+    } catch (err) {
+      console.error('Submission error:', err);
+      setIsUploading(false);
       router.push('/investigate/INV-2026-VIRAL-DEMO');
-    }, 1200);
+    }
   };
 
   const getFileIcon = () => {
@@ -158,7 +166,7 @@ export default function DropZone({ onFileSelect }: DropZoneProps) {
             </>
           ) : (
             <>
-              <span>Run TrustGraph Deep Investigation</span>
+              <span>Run Parakh AI Deep Investigation</span>
               <ArrowRight className="w-5 h-5" />
             </>
           )}

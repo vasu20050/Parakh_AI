@@ -13,13 +13,13 @@ import TruthTimeline from '@/components/report/TruthTimeline';
 import ChallengeVerdictModal from '@/components/report/ChallengeVerdictModal';
 import VerificationReceipt from '@/components/report/VerificationReceipt';
 import { getInvestigationReport, InvestigationReport } from '@/services/api';
-import { ShieldCheck, HelpCircle, FileCheck, Network, Clock, Cpu, ExternalLink, Share2 } from 'lucide-react';
+import { ShieldCheck, HelpCircle, FileCheck, Network, Clock, Cpu, ExternalLink, Share2, FileImage, Camera, Sparkles, AlertOctagon, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 export default function InvestigationReportPage() {
   const params = useParams();
   const id = (params?.id as string) || 'INV-2026-VIRAL-DEMO';
   const [report, setReport] = useState<InvestigationReport | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'graph' | 'timeline' | 'forensics' | 'receipt'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'forensics' | 'graph' | 'timeline' | 'receipt'>('overview');
   const [isChallengeOpen, setIsChallengeOpen] = useState(false);
 
   useEffect(() => {
@@ -35,11 +35,13 @@ export default function InvestigationReportPage() {
       <div className="min-h-screen bg-[#07090e] text-slate-100 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-semibold text-slate-400">Loading Investigation Details...</span>
+          <span className="text-sm font-semibold text-slate-400">Loading Systemic Investigation Details...</span>
         </div>
       </div>
     );
   }
+
+  const forensics = report.forensics;
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 relative overflow-hidden flex flex-col">
@@ -71,15 +73,123 @@ export default function InvestigationReportPage() {
           </div>
         </div>
 
+        {/* SYSTEMIC FORENSIC SUMMARY CARDS (ALWAYS VISIBLE) */}
+        {forensics && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            
+            {/* CARD 1: AI Generation & Model Signature */}
+            <div className={`p-5 rounded-2xl glass-panel border space-y-3 ${
+              forensics.ai_analysis.is_ai_generated
+                ? 'border-rose-500/40 bg-rose-950/20'
+                : 'border-emerald-500/30 bg-emerald-950/10'
+            }`}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
+                  <Sparkles className="w-4 h-4 text-purple-400" /> AI Detection Analysis
+                </span>
+                <span className={`text-xs font-black px-2.5 py-0.5 rounded border ${
+                  forensics.ai_analysis.is_ai_generated
+                    ? 'bg-rose-500/20 text-rose-400 border-rose-500/30'
+                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                }`}>
+                  {forensics.ai_analysis.is_ai_generated ? 'AI GENERATED' : 'OPTICAL PHOTO'}
+                </span>
+              </div>
+
+              <div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-2xl font-black text-white">{forensics.ai_analysis.ai_probability_pct}%</span>
+                  <span className="text-xs text-slate-400 font-mono">AI Probability</span>
+                </div>
+                <div className="w-full bg-slate-900 rounded-full h-2 mt-1.5 overflow-hidden border border-slate-800">
+                  <div
+                    className={`h-full transition-all duration-500 ${
+                      forensics.ai_analysis.is_ai_generated ? 'bg-rose-500' : 'bg-emerald-500'
+                    }`}
+                    style={{ width: `${forensics.ai_analysis.ai_probability_pct}%` }}
+                  />
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-300 pt-1 border-t border-slate-800/80">
+                <span className="text-slate-500 font-mono block text-[10px]">CLASSIFIED GENERATOR</span>
+                <span className="font-semibold text-slate-200">{forensics.ai_analysis.generator_type}</span>
+              </div>
+            </div>
+
+            {/* CARD 2: Technical Image Specifications */}
+            <div className="p-5 rounded-2xl glass-panel border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
+                  <FileImage className="w-4 h-4 text-blue-400" /> Image Specifications
+                </span>
+                <span className="text-[10px] font-mono font-bold text-blue-400 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
+                  {forensics.format}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 font-mono block">RESOLUTION</span>
+                  <span className="font-bold text-slate-200">{forensics.resolution}</span>
+                </div>
+                <div className="p-2 rounded-xl bg-slate-950/60 border border-slate-800">
+                  <span className="text-[10px] text-slate-500 font-mono block">ASPECT RATIO</span>
+                  <span className="font-bold text-slate-200">{forensics.aspect_ratio}</span>
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-300 pt-1 border-t border-slate-800/80 flex items-center justify-between">
+                <div>
+                  <span className="text-slate-500 font-mono block text-[10px]">CAMERA METADATA</span>
+                  <span className="font-medium text-slate-300">{forensics.camera_info}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-slate-500 font-mono block text-[10px]">SOFTWARE TAG</span>
+                  <span className="font-medium text-slate-300">{forensics.software_used}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 3: ELA Compression & Edit Integrity */}
+            <div className="p-5 rounded-2xl glass-panel border border-slate-800 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 font-mono">
+                  <Camera className="w-4 h-4 text-amber-400" /> Compression Forensics (ELA)
+                </span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded border ${
+                  forensics.ela_forensics.is_suspicious
+                    ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                }`}>
+                  {forensics.ela_forensics.is_suspicious ? 'LOCAL EDITS' : 'UNIFORM ELA'}
+                </span>
+              </div>
+
+              <div>
+                <div className="flex items-baseline justify-between">
+                  <span className="text-2xl font-black text-white">{forensics.ela_forensics.ela_score}/100</span>
+                  <span className="text-xs text-slate-400 font-mono">ELA Integrity Score</span>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-300 leading-relaxed pt-1 border-t border-slate-800/80">
+                {forensics.ela_forensics.description}
+              </p>
+            </div>
+
+          </div>
+        )}
+
         {/* TOP ACTIONS BAR */}
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Tabs Nav */}
           <div className="flex items-center gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-800 overflow-x-auto max-w-full">
             {[
               { key: 'overview', label: 'Overview & Scores', icon: <ShieldCheck className="w-4 h-4" /> },
+              { key: 'forensics', label: 'Systemic Content Breakdown', icon: <Cpu className="w-4 h-4" /> },
               { key: 'graph', label: 'Evidence Graph', icon: <Network className="w-4 h-4" /> },
               { key: 'timeline', label: 'Truth Timeline', icon: <Clock className="w-4 h-4" /> },
-              { key: 'forensics', label: 'Forensics & Models', icon: <Cpu className="w-4 h-4" /> },
               { key: 'receipt', label: 'Verification Receipt', icon: <FileCheck className="w-4 h-4" /> },
             ].map((tab) => (
               <button
@@ -110,7 +220,7 @@ export default function InvestigationReportPage() {
             <button
               onClick={() => {
                 if (navigator.share) {
-                  navigator.share({ title: 'TrustGraph Report', url: window.location.href });
+                  navigator.share({ title: 'Parakh AI Report', url: window.location.href });
                 } else {
                   navigator.clipboard.writeText(window.location.href);
                   alert('Report URL copied to clipboard!');
@@ -174,7 +284,67 @@ export default function InvestigationReportPage() {
           </div>
         )}
 
-        {/* TAB 2: EVIDENCE GRAPH */}
+        {/* TAB 2: SYSTEMIC CONTENT BREAKDOWN (FAKE CONTENT ANALYSIS) */}
+        {activeTab === 'forensics' && (
+          <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-6">
+            <div>
+              <h3 className="font-bold text-white text-base mb-1">Systemic Content Integrity Breakdown</h3>
+              <p className="text-xs text-slate-400">Detailed component-by-component audit of what elements are authentic, modified, or synthetic AI.</p>
+            </div>
+
+            {forensics && forensics.fake_content_analysis && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Detected Image Element Breakdown</h4>
+                {forensics.fake_content_analysis.map((item, idx) => (
+                  <div key={idx} className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 flex items-start gap-3">
+                    {item.status === 'authentic' ? (
+                      <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                    ) : item.status === 'synthetic_ai' ? (
+                      <Sparkles className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                    )}
+                    <div className="space-y-1 flex-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-sm text-white">{item.element}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border uppercase ${
+                          item.status === 'authentic'
+                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                            : item.status === 'synthetic_ai'
+                            ? 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                        }`}>
+                          {item.status.replace('_', ' ')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-300 leading-relaxed">{item.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="space-y-3 pt-4 border-t border-slate-800">
+              <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Model Registry & Execution Audit</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {report.methodology.models_used.map((model, idx) => (
+                  <div key={idx} className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-white">{model.name}</span>
+                      <span className="font-mono text-slate-400">v{model.version}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <span>Confidence: {(model.confidence * 100).toFixed(0)}%</span>
+                      <span>Latency: {model.processing_ms} ms</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: EVIDENCE GRAPH */}
         {activeTab === 'graph' && (
           <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-4">
             <div>
@@ -185,7 +355,7 @@ export default function InvestigationReportPage() {
           </div>
         )}
 
-        {/* TAB 3: TRUTH TIMELINE */}
+        {/* TAB 4: TRUTH TIMELINE */}
         {activeTab === 'timeline' && (
           <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-4">
             <div>
@@ -193,40 +363,6 @@ export default function InvestigationReportPage() {
               <p className="text-xs text-slate-400">Traces historical appearances and context shifts from first discovery to present.</p>
             </div>
             <TruthTimeline events={report.timeline} />
-          </div>
-        )}
-
-        {/* TAB 4: FORENSICS & MODELS */}
-        {activeTab === 'forensics' && (
-          <div className="p-6 rounded-3xl glass-panel border border-slate-800 space-y-6">
-            <div>
-              <h3 className="font-bold text-white text-base mb-1">Model Registry & Execution Audit</h3>
-              <p className="text-xs text-slate-400">Detailed list of AI/ML models invoked during this investigation run.</p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {report.methodology.models_used.map((model, idx) => (
-                <div key={idx} className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-white">{model.name}</span>
-                    <span className="font-mono text-slate-400">v{model.version}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-slate-400">
-                    <span>Confidence: {(model.confidence * 100).toFixed(0)}%</span>
-                    <span>Latency: {model.processing_ms} ms</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="space-y-2 pt-2 border-t border-slate-800">
-              <h4 className="text-xs font-bold text-white uppercase tracking-wider">Methodology Limitations</h4>
-              <ul className="list-disc list-inside text-xs text-slate-400 space-y-1">
-                {report.methodology.limitations.map((lim, idx) => (
-                  <li key={idx}>{lim}</li>
-                ))}
-              </ul>
-            </div>
           </div>
         )}
 

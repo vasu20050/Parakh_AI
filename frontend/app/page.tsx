@@ -7,9 +7,11 @@ import DropZone from '@/components/upload/DropZone';
 import URLInput from '@/components/upload/URLInput';
 import Link from 'next/link';
 import { ShieldCheck, Cpu, GitBranch, Layers, Sparkles, ArrowRight, PlayCircle, CheckCircle, Lock, Eye } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'upload' | 'url'>('upload');
+  const { t } = useLanguage();
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 relative overflow-hidden flex flex-col">
@@ -27,16 +29,16 @@ export default function Home() {
           
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold tracking-wide backdrop-blur-md">
             <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span>Digital Trust Infrastructure • Next-Gen AI Verification</span>
+            <span>{t('heroBadge')}</span>
           </div>
 
           <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight leading-tight">
-            Before you believe it, <br />
-            <span className="gradient-text">verify it.</span>
+            {t('heroTitle1')} <br />
+            <span className="gradient-text">{t('heroTitle2')}</span>
           </h1>
 
           <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            We don't just detect deepfakes. We verify digital reality — extracting claims, tracing content to its original source, evaluating context accuracy, and presenting explainable evidence.
+            {t('heroDesc')}
           </p>
 
           {/* KILLER DEMO QUICK LAUNCH BUTTON */}
@@ -66,7 +68,7 @@ export default function Home() {
               }`}
             >
               <Layers className="w-4 h-4" />
-              Upload Media / Files
+              {t('tabUpload')}
             </button>
 
             <button
@@ -78,7 +80,7 @@ export default function Home() {
               }`}
             >
               <Eye className="w-4 h-4" />
-              Submit Web / Social URL
+              {t('tabUrl')}
             </button>
           </div>
 
@@ -137,11 +139,11 @@ export default function Home() {
               </ul>
             </div>
 
-            {/* TrustGraph Platform Card */}
+            {/* Parakh AI Evidence Engine */}
             <div className="p-6 rounded-2xl glass-panel border border-blue-500/30 space-y-4 shadow-xl">
               <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
                 <CheckCircle className="w-4 h-4 text-emerald-400" />
-                TrustGraph Evidence Engine
+                Parakh AI Evidence Engine
               </div>
               <ul className="space-y-3 text-xs text-slate-200">
                 <li className="flex items-start gap-2">
@@ -176,7 +178,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             {[
               { title: 'Media Authenticity', desc: 'Forensic checks for AI generation, ELA artifacts, and face manipulation.', icon: <Cpu className="w-5 h-5 text-blue-400" /> },
-              { title: 'Claim Credibility', desc: 'Gemini NLP extracts claims and verifies against retrieved evidence.', icon: <Sparkles className="w-5 h-5 text-purple-400" /> },
+              { title: 'Claim Credibility', desc: 'Open-source NLP extracts claims and verifies against retrieved evidence.', icon: <Sparkles className="w-5 h-5 text-purple-400" /> },
               { title: 'Context Accuracy', desc: 'Cross-checks location, weather, date, and event metadata.', icon: <Eye className="w-5 h-5 text-amber-400" /> },
               { title: 'Source Signals', desc: 'Evaluates publisher history, reliability footprint, and activity.', icon: <Layers className="w-5 h-5 text-emerald-400" /> },
               { title: 'Evidence Strength', desc: 'Weights relevance, independence, and recency of retrieved sources.', icon: <GitBranch className="w-5 h-5 text-indigo-400" /> },

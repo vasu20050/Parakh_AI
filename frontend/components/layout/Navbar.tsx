@@ -2,8 +2,12 @@
 
 import Link from 'next/link';
 import { ShieldCheck, Cpu, Search, FileText, Lock, LayoutDashboard } from 'lucide-react';
+import LanguageSelector from './LanguageSelector';
+import { useLanguage } from '@/context/LanguageContext';
 
 export default function Navbar() {
+  const { t } = useLanguage();
+
   return (
     <header className="sticky top-0 z-50 backdrop-blur-xl bg-slate-950/75 border-b border-slate-800/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -30,7 +34,7 @@ export default function Navbar() {
             className="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-2"
           >
             <Search className="w-4 h-4 text-blue-400" />
-            Investigate
+            {t('navInvestigate')}
           </Link>
 
           <Link
@@ -38,7 +42,7 @@ export default function Navbar() {
             className="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-2"
           >
             <Cpu className="w-4 h-4 text-indigo-400" />
-            Killer Demo Report
+            {t('navDemo')}
           </Link>
 
           <Link
@@ -46,7 +50,7 @@ export default function Navbar() {
             className="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-2"
           >
             <LayoutDashboard className="w-4 h-4 text-emerald-400" />
-            Dashboard
+            {t('navDashboard')}
           </Link>
 
           <Link
@@ -54,18 +58,20 @@ export default function Navbar() {
             className="px-3.5 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800/50 transition-colors flex items-center gap-2"
           >
             <FileText className="w-4 h-4 text-amber-400" />
-            Admin Stats
+            {t('navAdmin')}
           </Link>
         </nav>
 
         {/* Actions */}
         <div className="flex items-center gap-3">
+          <LanguageSelector />
+
           <Link
             href="/login"
             className="px-4 py-2 rounded-xl text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-lg shadow-blue-600/25 hover:shadow-blue-600/40 transition-all flex items-center gap-2"
           >
             <Lock className="w-3.5 h-3.5" />
-            Sign In
+            {t('navSignIn')}
           </Link>
         </div>
 
